@@ -1,8 +1,8 @@
 # SteamScreenshotDownloader
 
-I wanted to download all of my screenshots from Steam but I couldn't find any good way. This works but it'll only download screenshots that are public. So you need to make your profile and screenshots public to grab them all.
+Forked from (https://github.com/garrynewman/SteamScreenshotDownloader)
 
-It works by RegEx'ing Steam's website so it'll need fixing up if they change the design much.
+Fixed version of Garry Newman's SteamScreenshotDownloader. This version also superimposes your caption under the image (hopefully)
 
 ![Console Input](https://files.facepunch.com/garry/58d5fb12-a6eb-4a69-b1b6-75f81b54556f.png)
 
