@@ -9,6 +9,9 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
+// Original version credit to Garry Newman (https://github.com/garrynewman)
+// Current version by Lightning2x (https://github.com/Lightning2X)
+
 namespace SteamDownloader
 {
     class Program
