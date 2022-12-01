@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -19,7 +20,6 @@ namespace SteamDownloader
 
         static List<ulong> FILES = new List<ulong>();
         static long STEAM_ID;
-        static string DOWNLOAD_FOLDER => $"./Screenshots/{STEAM_ID}";
         static string USER_AGENT => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36";
         static readonly Dictionary<string, string> MIME_TO_EXTENSION = new Dictionary<string, string>()
         {
@@ -28,7 +28,7 @@ namespace SteamDownloader
             { "image/gif", ".gif" },
             { "image/webp", ".webp" },
         };
-        static int MAX_RETRIES => 3;
+        static int MAX_RETRIES => 2;
         static int RETRY_DELAY => 3000;
         static int TASK_LIMIT => 16;
 
@@ -48,7 +48,7 @@ namespace SteamDownloader
             Console.WriteLine($"All done! You can see the files in \"{Path.GetFullPath($"./{STEAM_ID}")}\"");
 
             Console.WriteLine();
-            
+
         }
 
         static async Task DownloadTab(string tab, string cosmeticName = null)
@@ -58,7 +58,7 @@ namespace SteamDownloader
             string path = $"./{STEAM_ID}/{name}";
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
-            
+
             // Scan all the user's pages and save the files in them to the FILES variable
             await ScanPages(tab);
             Console.WriteLine($"Found {FILES.Count} {name}.");
@@ -103,21 +103,17 @@ namespace SteamDownloader
             {
                 Console.WriteLine($"Getting Page {page} ({FILES.Count} screenshots found)");
 
-                int fails = 0;
+                int attempts = 0;
                 while (!await GetPage(page, STEAM_ID.ToString(), tab))
                 {
-                    fails++;
-                    Console.WriteLine($"Page {page} didn't have any screenshots, skipping...");
-
-                    if (fails > 3)
+                    attempts++;
+                    if (attempts >= MAX_RETRIES)
                     {
-                        Console.WriteLine($"WARNING: 3 fails after scanning pages. Maybe we're at the end?");
+                        Console.WriteLine($"No results found in 3 attempts. Assuming this is the end and terminating scanning.");
                         return;
                     }
 
-                    Console.WriteLine($"WARNING: Retry due to potential server error");
-
-                    await Task.Delay(fails * 1000);
+                    await Task.Delay(attempts * 1000);
                 }
 
                 await Task.Delay(100);
@@ -139,29 +135,23 @@ namespace SteamDownloader
         /// <returns>a task for performing the transformation</returns>
         private static async Task<bool> GetPage(int pageid, string targetAccount, string tab)
         {
-            try
+            // Removed the catch for now as its more clear to the user that the program is crashing this way
+            using (var client = new HttpClient())
             {
-                using (var client = new HttpClient())
+                var response = await client.GetStringAsync($"https://steamcommunity.com/profiles/{targetAccount}/{tab}?p={pageid}&browsefilter=myfiles&view=grid&privacy=30");
+                var matches = Regex.Matches(response, "steamcommunity\\.com/sharedfiles/filedetails/\\?id\\=([0-9]+?)\"", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+                if (matches.Count == 0)
+                    return false;
+
+                foreach (Match match in matches)
                 {
-                    var response = await client.GetStringAsync($"https://steamcommunity.com/profiles/{targetAccount}/{tab}?p={pageid}&browsefilter=myfiles&view=grid&privacy=30");
-                    var matches = Regex.Matches(response, "steamcommunity\\.com/sharedfiles/filedetails/\\?id\\=([0-9]+?)\"", RegexOptions.Singleline | RegexOptions.IgnoreCase);
-
-                    if (matches.Count == 0)
-                        return false;
-
-                    foreach (Match match in matches)
-                    {
-                        FILES.Add(ulong.Parse(match.Groups[1].Value));
-                    }
+                    FILES.Add(ulong.Parse(match.Groups[1].Value));
                 }
+            }
 
-                return true;
-            }
-            catch (System.Exception e)
-            {
-                Console.Error.WriteLine(e.Message);
-                return false;
-            }
+            return true;
+
         }
 
         /// <summary>
