@@ -1,5 +1,5 @@
 ﻿// Uncomment this to only download the first 10 files (for debugging its easier to not download everything)
-#define PARTIAL_DOWNLOAD
+//#define PARTIAL_DOWNLOAD
 
 using System;
 using System.Collections.Generic;
@@ -31,40 +31,50 @@ namespace SteamDownloader
         static int MAX_RETRIES => 3;
         static int RETRY_DELAY => 3000;
         static int TASK_LIMIT => 16;
-        static string Version => "1.0";
 
         static async Task Main(string[] args)
         {
-            Console.WriteLine($"Steam Screenshot Downloader V{Version}");
+            Console.WriteLine($"Steam Screenshot Downloader V2.0");
             Console.WriteLine();
             Console.WriteLine("Please fill in your Steam64 ID. You can find it by googling steam id finder and entering your URL there. Example Steam64 ID: 76561198053864545");
             Console.WriteLine("Please paste your Steam ID by right clicking or pressing ctrl V:");
             STEAM_ID = ReadSteamId();
 
+            Console.WriteLine($"Downloading screenshots for Steam ID {STEAM_ID}...");
+            await DownloadTab("screenshots");
+            Console.WriteLine($"Downloading artwork for Steam ID {STEAM_ID}...");
+            await DownloadTab("images", "artwork");
+
+            Console.WriteLine($"All done! You can see the files in \"{Path.GetFullPath($"./{STEAM_ID}")}\"");
+
+            Console.WriteLine();
+            
+        }
+
+        static async Task DownloadTab(string tab, string cosmeticName = null)
+        {
             // Make sure the folder exists
-            if (!Directory.Exists(DOWNLOAD_FOLDER))
-                Directory.CreateDirectory(DOWNLOAD_FOLDER);
-
+            string name = cosmeticName ?? tab;
+            string path = $"./{STEAM_ID}/{name}";
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+            
             // Scan all the user's pages and save the files in them to the FILES variable
-            await ScanPages();
-
+            await ScanPages(tab);
+            Console.WriteLine($"Found {FILES.Count} {name}.");
             // Remove any duplicates
             FILES = FILES.Distinct().ToList();
-
             if (FILES.Count == 0)
             {
-                Console.WriteLine();
-                Console.WriteLine("No screenshots found. Is the profile set to private?");
+                Console.WriteLine($"Nothing found for tab {name}. Press any key to exit.");
+                Console.ReadKey();
                 return;
             }
 
-            Console.WriteLine($"Found {FILES.Count()} Screenshots");
-
             // Download them all
-            await DownloadImages();
+            await DownloadImages(path);
 
-            Console.WriteLine();
-            Console.WriteLine($"All done! You can see the screenshots in \"/{Path.GetFullPath(DOWNLOAD_FOLDER)}/\"");
+            FILES.Clear();
         }
 
         /// <summary>
@@ -86,7 +96,7 @@ namespace SteamDownloader
         /// Scans the user's steam screenshot pages
         /// </summary>
         /// <returns>A task that performs the page scan</returns>
-        static async Task ScanPages()
+        static async Task ScanPages(string tab)
         {
             int page = 1;
             while (true)
@@ -94,7 +104,7 @@ namespace SteamDownloader
                 Console.WriteLine($"Getting Page {page} ({FILES.Count} screenshots found)");
 
                 int fails = 0;
-                while (!await GetPage(page, STEAM_ID.ToString()))
+                while (!await GetPage(page, STEAM_ID.ToString(), tab))
                 {
                     fails++;
                     Console.WriteLine($"Page {page} didn't have any screenshots, skipping...");
@@ -117,8 +127,8 @@ namespace SteamDownloader
                 {
                     break;
                 }
-            }
 #endif
+            }
         }
 
         /// <summary>
@@ -127,13 +137,13 @@ namespace SteamDownloader
         /// <param name="pageid">The page id</param>
         /// <param name="targetAccount">The target account</param>
         /// <returns>a task for performing the transformation</returns>
-        private static async Task<bool> GetPage(int pageid, string targetAccount)
+        private static async Task<bool> GetPage(int pageid, string targetAccount, string tab)
         {
             try
             {
                 using (var client = new HttpClient())
                 {
-                    var response = await client.GetStringAsync($"https://steamcommunity.com/profiles/{targetAccount}/screenshots?p={pageid}&browsefilter=myfiles&view=grid&privacy=30");
+                    var response = await client.GetStringAsync($"https://steamcommunity.com/profiles/{targetAccount}/{tab}?p={pageid}&browsefilter=myfiles&view=grid&privacy=30");
                     var matches = Regex.Matches(response, "steamcommunity\\.com/sharedfiles/filedetails/\\?id\\=([0-9]+?)\"", RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
                     if (matches.Count == 0)
@@ -158,7 +168,7 @@ namespace SteamDownloader
         /// Downloads all files and writes images to disk
         /// </summary>
         /// <returns>A task for performing the image download</returns>
-        static async Task DownloadImages()
+        static async Task DownloadImages(string folder)
         {
             var tasks = new List<Task>();
 #if PARTIAL_DOWNLOAD
@@ -167,7 +177,7 @@ namespace SteamDownloader
 #endif
             foreach (var file in FILES)
             {
-                var t = DownloadImage(file);
+                var t = DownloadImage(file, folder);
 
                 tasks.Add(t);
 
@@ -188,7 +198,7 @@ namespace SteamDownloader
         /// <param name="file">The file</param>
         /// <param name="retries">The amount of retries for this file</param>
         /// <returns>The task performing the image download</returns>
-        private static async Task<bool> DownloadImage(ulong file, int retries = 0)
+        private static async Task<bool> DownloadImage(ulong file, string folder, int retries = 0)
         {
             if (retries >= MAX_RETRIES)
             {
@@ -217,7 +227,7 @@ namespace SteamDownloader
                 var extension = GetFileExtension(download.Content.Headers.GetValues("Content-Type").First());
                 var data = await download.Content.ReadAsByteArrayAsync();
 
-                File.WriteAllBytes($"{DOWNLOAD_FOLDER}/{fileId}{extension}", data);
+                File.WriteAllBytes($"{folder}/{fileId}{extension}", data);
 
                 return true;
             }
@@ -225,7 +235,7 @@ namespace SteamDownloader
             {
                 Console.Error.WriteLine(e.Message);
                 await Task.Delay(RETRY_DELAY);
-                return await DownloadImage(file, retries + 1);
+                return await DownloadImage(file, folder, retries + 1);
             }
         }
 
