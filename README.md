@@ -1,8 +1,13 @@
 # SteamScreenshotDownloader
 
-Forked from (https://github.com/garrynewman/SteamScreenshotDownloader)
+Fixed version of Garry Newman's SteamScreenshotDownloader. Can also download Artworks.
 
-Fixed version of Garry Newman's SteamScreenshotDownloader. This version also superimposes your caption under the image (hopefully)
+How to compile: Should compile out of the box in visual studio and vscode
+
+TODO: 
+> Automatic github release
+> Add captions superimposed on images
+> Add videos tab when I feel like it
 
 ![Console Input](https://files.facepunch.com/garry/58d5fb12-a6eb-4a69-b1b6-75f81b54556f.png)
 
