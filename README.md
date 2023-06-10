@@ -13,8 +13,8 @@ How to compile: Should compile out of the box in visual studio and vscode
 
 Get your Steam64 ID:
 
-- Open steam client or [steam site](https://steamcommunity.com/) while logged inm
-- Go to your profile, then get link/id by using the right-click menu or address bar;
+- Open steam client or [steam site](https://steamcommunity.com/) while logged in
+- Go to your profile, then get link/id by using the right-click menu or address bar
 - Open the [Steam ID Finder](https://www.steamidfinder.com/) site, and fill in your id/link;
 - Steam64 ID can be seen at the `steamID64 (Dec)` text box
 
