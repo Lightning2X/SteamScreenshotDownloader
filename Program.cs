@@ -201,7 +201,7 @@ namespace SteamDownloader
                 client.DefaultRequestHeaders.Add("user-agent", USER_AGENT);
 
                 var response = await client.GetStringAsync($"https://steamcommunity.com/sharedfiles/filedetails/?id={file}");
-                var matches = Regex.Matches(response, "\\<a href\\=\"(https\\://steamuserimages-a.akamaihd.net/ugc/([A-Z0-9/].+?))\"", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+                var matches = Regex.Matches(response, "\\<a href\\=\"(https\\://images.steamusercontent.com/ugc/([A-Z0-9/].+?))\"", RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
                 if (matches.Count == 0)
                 {
